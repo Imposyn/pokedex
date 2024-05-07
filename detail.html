@@ -93,6 +93,186 @@
   <p class="body3-fonts gender-ratio"></p>
   <p class="body3-fonts catch-rate"></p>
   <p class="caption-fonts">Abilities</p>
+  <div>
+    <label for="generationSelect">Select Generation:</label>
+    <select id="generationSelect">
+        <option value="1">Generation I</option>
+        <option value="2">Generation II</option>
+        <option value="3">Generation III</option>
+        <option value="4">Generation IV</option>
+        <option value="5">Generation V</option>
+        <option value="6">Generation VI</option>
+        <option value="7">Generation VII</option>
+        <option value="8">Generation VIII</option>
+        <option value="9">Generation IX</option>
+    </select>
+</div>
+<div>
+    <label for="pokemonSelect">Select Pokemon:</label>
+    <select id="pokemonSelect">
+        <!-- Populate with Pokemon options -->
+    </select>
+</div>
+<div class="tabber wds-tabber">
+    <div class="wds-tabs__wrapper with-bottom-border">
+        <ul class="wds-tabs">
+            <!-- Tabs for displaying learnset will be dynamically populated here -->
+        </ul>
+    </div>
+    <div id="genContent" class="wds-tab__content wds-is-current">
+        <!-- Learnset table will be dynamically populated here -->
+    </div>
+</div>
+
+<script>
+    async function fetchPokemonList() {
+        try {
+            const response = await fetch(`https://pokeapi.co/api/v2/pokemon/?limit=1000`);
+            const data = await response.json();
+            return data.results;
+        } catch (error) {
+            console.error('Error fetching Pokemon list:', error);
+        }
+    }
+
+    async function fetchLearnset(pokemonName, generation) {
+try {
+    const response = await fetch(`https://pokeapi.co/api/v2/pokemon/${pokemonName.toLowerCase()}/`);
+    const data = await response.json();
+    console.log("API Response:", data); // Log the API response
+    const versionGroupId = getVersionGroupIdByGeneration(generation);
+    const moves = data.moves.filter(move =>
+        move.version_group_details.some(detail => detail.version_group.url.includes(versionGroupId))
+    );
+    // Fetch additional details for each move
+    const movesWithDetails = await Promise.all(moves.map(async move => {
+        const moveData = await fetch(move.move.url);
+        const moveDetails = await moveData.json();
+        return {
+            name: move.move.name,
+            level: move.version_group_details.find(detail => detail.version_group.url.includes(versionGroupId)).level_learned_at,
+            power: moveDetails.power,
+            accuracy: moveDetails.accuracy,
+            pp: moveDetails.pp,
+            type: moveDetails.type.name,
+            category: moveDetails.damage_class.name
+        };
+    }));
+    return movesWithDetails;
+} catch (error) {
+    console.error('Error fetching learnset:', error);
+}
+}
+
+function getVersionGroupIdByGeneration(generation) {
+// Map generation number to version group id
+const versionGroups = {
+    1: 1, // Generation I
+    2: 3, // Generation II
+    3: 5, // Generation III
+    4: 7, // Generation IV
+    5: 9, // Generation V
+    6: 11, // Generation VI
+    7: 13, // Generation VII
+    8: 17, // Generation VIII
+    9: 21 // Generation IX (Assuming this is the correct ID for future generations)
+};
+return versionGroups[generation];
+}
+
+async function displayLearnset(pokemonName, generation) {
+console.log("Displaying learnset for:", pokemonName, "in generation:", generation);
+const moves = await fetchLearnset(pokemonName, generation);
+console.log("Moves for", pokemonName, "in generation", generation, ":", moves);
+// Rest of the function remains unchanged
+const learnsetTable = document.createElement('table');
+learnsetTable.classList.add('roundy');
+learnsetTable.style.margin = 'auto';
+learnsetTable.style.width = '80%'; // Adjusted width for better visibility
+learnsetTable.style.borderCollapse = 'collapse'; // Ensure borders collapse properly
+learnsetTable.style.border = '2px solid #A8A878';
+
+const tbody = document.createElement('tbody');
+
+// Populate the table with moves
+moves.forEach(move => {
+    const row = document.createElement('tr');
+    // Create cells for move details
+    const levelCell = document.createElement('td');
+    levelCell.textContent = move.level;
+    levelCell.style.border = '1px solid #A8A878';
+    row.appendChild(levelCell);
+
+    const moveNameCell = document.createElement('td');
+    moveNameCell.textContent = move.name;
+    moveNameCell.style.border = '1px solid #A8A878';
+    row.appendChild(moveNameCell);
+
+    const powerCell = document.createElement('td');
+    powerCell.textContent = move.power || ''; // Handle null values
+    powerCell.style.border = '1px solid #A8A878';
+    row.appendChild(powerCell);
+
+    const accuracyCell = document.createElement('td');
+    accuracyCell.textContent = move.accuracy ? move.accuracy + '%' : ''; // Handle null values
+    accuracyCell.style.border = '1px solid #A8A878';
+    row.appendChild(accuracyCell);
+
+    const ppCell = document.createElement('td');
+    ppCell.textContent = move.pp || ''; // Handle null values
+    ppCell.style.border = '1px solid #A8A878';
+    row.appendChild(ppCell);
+
+    const typeCell = document.createElement('td');
+    typeCell.textContent = move.type;
+    typeCell.style.border = '1px solid #A8A878';
+    row.appendChild(typeCell);
+
+    const categoryCell = document.createElement('td');
+    categoryCell.textContent = move.category;
+    categoryCell.style.border = '1px solid #A8A878';
+    row.appendChild(categoryCell);
+
+    tbody.appendChild(row);
+});
+
+learnsetTable.appendChild(tbody);
+
+const genContent = document.getElementById('genContent');
+genContent.innerHTML = ''; // Clear previous content
+genContent.appendChild(learnsetTable);
+}
+
+    // Populate Pokemon dropdown
+    async function populatePokemonDropdown() {
+        const pokemonList = await fetchPokemonList();
+        const pokemonSelect = document.getElementById('pokemonSelect');
+        pokemonList.forEach((pokemon, index) => {
+            const option = document.createElement('option');
+            option.value = pokemon.name; // Set value to pokemon name
+            option.textContent = pokemon.name;
+            pokemonSelect.appendChild(option);
+        });
+    }
+
+    populatePokemonDropdown();
+
+    // Add event listener to generation dropdown for fetching and displaying learnsets
+    document.getElementById('generationSelect').addEventListener('change', function() {
+        const pokemonName = document.getElementById('pokemonSelect').value;
+        const generation = this.value;
+        displayLearnset(pokemonName, generation);
+    });
+
+    // Add event listener to pokemon dropdown for fetching and displaying learnsets
+    document.getElementById('pokemonSelect').addEventListener('change', function() {
+        const generation = document.getElementById('generationSelect').value;
+        const pokemonName = this.value; // Get value instead of textContent
+        displayLearnset(pokemonName, generation);
+    });
+</script>
+</body>
+</html>
   <div class="pokemon-detail-wrap">
    <div class="pokemon-detail ability"></div>
   </div>

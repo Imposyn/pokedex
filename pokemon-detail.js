@@ -18,9 +18,9 @@ async function loadPokemon(id) {
       displayPokemonDetails(pokemon);
 
       // Add abilities data (moves)
-      const abilities = pokemon.moves.map((move) => move.move.name);
-      const abilitiesElement = document.querySelector(".pokemon-detail.ability");
-      abilitiesElement.innerHTML = abilities.join(", ");
+      // const abilities = pokemon.moves.map((move) => move.move.name);
+      // const abilitiesElement = document.querySelector(".pokemon-detail.ability");
+      //abilitiesElement.innerHTML = abilities.join(", ");
 
       // Add gender ratio
       const genderRatio = getGenderRatio(pokemonSpecies);
